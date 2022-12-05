@@ -21,9 +21,6 @@ Mouse1 - get particle info in console
 Left/Right - change gravity vector;
 A - add more object (+ 1/4 n)
 */
-void drawGrid(Scene& scene, sf::RenderWindow& win);
-void mouseClick(sf::RenderWindow& win, Scene& scene);
-void explode(sf::RenderWindow& win, Scene& scene, float radius, float power);
 
 
 int main()
@@ -35,7 +32,6 @@ int main()
     const int radius = 3;
 
     bool stopped = false;
-    bool toDrawGrid = false;
     bool toDrawPressure = false;
     bool toRender = true;
     
@@ -49,7 +45,7 @@ int main()
 
 
     Scene scene(W, H, radius, sf::Vector2f{ 0, 0 }, sf::Vector2f{ W, H });
-    scene.setSubStepsCount(16);
+    scene.setSubStepsCount(6);
 
 
     sf::Clock clock = sf::Clock::Clock();
@@ -85,12 +81,10 @@ int main()
                     scene.simulate();
                 //if (event.key.code == sf::Keyboard::PageUp && stopped)
                     //scene.subSimulate(); Пока не реализовано на GPU
-                if (event.key.code == sf::Keyboard::G)
-                    toDrawGrid = !toDrawGrid;
                 if (event.key.code == sf::Keyboard::R)
                     toRender = !toRender;
                 if (event.key.code == sf::Keyboard::E)
-                    explode(window, scene, 120, 200);
+                    renderer.explode(scene, 120, 200);
                 if (event.key.code == sf::Keyboard::P)
                     toDrawPressure = !toDrawPressure;
                     scene.particlesPressure(toDrawPressure);
@@ -112,9 +106,6 @@ int main()
             scene.simulate();
         if(toRender)
             renderer.render(scene);
-        if (toDrawGrid)
-            drawGrid(scene, window);
-
 
         cur = clock.getElapsedTime();
         text.drawAll(cur, prev, scene.getCount());
@@ -127,74 +118,4 @@ int main()
 
 
     return 0;
-}
-
-
-void drawGrid(Scene& scene, sf::RenderWindow& win)
-{
-    /*
-    int  X = scene.getGridSize().x;
-    int Y = scene.getGridSize().y;
-
-    auto W = scene.getBorders()[1].x;
-    auto H = scene.getBorders()[1].y;
-
-    auto sW = W / X;
-    auto sH = H / Y;
-
-    auto cellCnt = scene.getGridCellCount();
-
-    sf::RectangleShape r(sf::Vector2f(sW, sH));
-    r.setFillColor(sf::Color::Black);
-    r.setOutlineThickness(0.5f);
-    r.setOutlineColor(sf::Color(255,255,255,100));
-
-    const int size = X * Y;
-
-    for (int i{}; i < size; ++i)
-    {
-        float color = cellCnt[i] * 100;
-        float alpha = cellCnt[i] * 90;
-        if (color > 255) color = 255;
-        if (alpha > 255) alpha = 255;
-        r.setFillColor(sf::Color(0, color, 0, alpha));
-        r.setPosition(sf::Vector2f((i/Y) * sW, (i%Y) * sH));
-        win.draw(r);
-    }   
-    */
-}
-
-void mouseClick(sf::RenderWindow& win, Scene& scene)
-{
-    /*
-    const auto pos = sf::Vector2f(sf::Mouse::getPosition(win).x, sf::Mouse::getPosition(win).y);
-    std::cout << pos.x << ' ' << pos.y << '\n';
-    for (auto i : scene.getParticles())
-    {
-        const sf::Vector2f diff = pos - i.pos();
-        if (sqrtf(diff.x * diff.x + diff.y * diff.y) <= i.radius())
-        {
-            i.print();
-        }
-    }
-    */
-}
-
-void explode(sf::RenderWindow& win, Scene& scene, float radius, float power)
-{
-    
-    const auto pos = sf::Vector2f(sf::Mouse::getPosition(win).x, sf::Mouse::getPosition(win).y);
-    std::cout << pos.x << ' ' << pos.y << ": " << "Explosion" << "\n";
-    auto particles = scene.getParticles();
-    int count = scene.getCount();
-    for (int i{}; i < count; ++i)
-    {
-        const sf::Vector2f diff = pos - particles[i].pos();
-        const float m = sqrtf(diff.x * diff.x + diff.y * diff.y);
-        if (m <= radius)
-        {
-            particles[i].setPos(particles[i].pos(), particles[i].pos() + (diff / m * (radius - (m * 0.7f)) / radius * power));
-        }
-    }
-    
 }

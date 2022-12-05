@@ -247,7 +247,7 @@ void KernelScene::simulate(Particle* p, int count, float dt, int substeps)
 
 		calculateCollisions <<< NUM_SM * MAX_BLOCKS, 1024 >>> (device_grid, device_cells, device_particles, gridWidth, gridHeight, cellSize, radius, count);
 
-		applyGravityKernel << < NUM_SM * MAX_BLOCKS, 1024 >> > (device_particles, count, gravity);
+		applyGravityKernel << < NUM_SM * MAX_BLOCKS, 1024 >> > (device_particles, count, gravity/(float)substeps);
 
 
 		applyCollisionsKernel << < NUM_SM * MAX_BLOCKS, 1024 >> > (device_grid, device_cells, device_particles,gridWidth, gridHeight, cellSize, radius);
