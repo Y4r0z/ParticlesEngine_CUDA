@@ -9,7 +9,8 @@ class Scene
 private:
 	float m_dt = 0.012f;
 	int m_substeps = 4;
-	std::vector<Particle> m_particles;
+	Particle* particles;
+	int count = 0;
 	sf::Vector2f m_gravity{ 0, 9.8f };
 	std::vector<sf::Vector2f> m_borders;
 
@@ -26,33 +27,20 @@ private:
 	const int gridWidth = (int)(windowWidth / (radius * 2.f));
 	const int gridHeight = (int)(windowHeight / (radius * 2.f));
 
-	int* cellCount;
-	Particle* grid;
-
-	void updateGrid();
-	void gridCollide(int pos1, int pos2);
-	void staticGrid();
-
 	KernelScene* kernel;
 	
 
 public:
 	Scene(int width, int height, float radius, sf::Vector2f b1, sf::Vector2f b2);
-	void subSimulate();
 	void simulate();
-	void applyGravity();
-	void updatePositions(float dt);
-	void applyConstraints();
-	void applyCollisions();
 
 	void addParticle(Particle& p);
 
-	std::vector<Particle>& getParticles();
+	Particle* getParticles();
 	std::vector<sf::Vector2f>& getBorders();
 	sf::Vector2f getGravity();
-	sf::Vector2f getGridSize();
-	Particle* getGrid();
-	int* getGridCellCount();
+
+	int getCount() { return count; }
 	float getRadius() { return radius; }
 	int getCellSize() { return cellSize; }
 

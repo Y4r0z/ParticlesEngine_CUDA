@@ -18,8 +18,42 @@ Renderer::Renderer(sf::RenderWindow& window) : m_window(window)
 }
 
 
-
 void Renderer::render(Scene& scene)
+{
+	auto particles = scene.getParticles();
+	int count = scene.getCount();
+	sf::VertexArray v(sf::Quads, count * 4);
+
+	for (size_t i{}; i < count * 4; i += 4)
+	{
+		const auto pos = particles[i / 4].pos();
+		const auto r = particles[i / 4].r();
+		const auto c = particles[i / 4].color();
+		const int t = 64;
+
+		v[i].color = c;
+		v[i].position = sf::Vector2f(pos.x - r, pos.y - r);
+		v[i].texCoords = sf::Vector2f(0, 0);
+
+		v[i + 1].color = c;
+		v[i + 1].position = sf::Vector2f(pos.x + r, pos.y - r);
+		v[i + 1].texCoords = sf::Vector2f(t, 0);
+
+		v[i + 2].color = c;
+		v[i + 2].position = sf::Vector2f(pos.x + r, pos.y + r);
+		v[i + 2].texCoords = sf::Vector2f(t, t);
+
+		v[i + 3].color = c;
+		v[i + 3].position = sf::Vector2f(pos.x - r, pos.y + r);
+		v[i + 3].texCoords = sf::Vector2f(0, t);
+
+	}
+	m_window.draw(v, &circleTexture);
+
+}
+
+/*
+void renderGrid(Scene& scene)
 {
 	auto gridWidth = scene.getGridSize().x;
 	auto gridHeight = scene.getGridSize().y;
@@ -62,23 +96,10 @@ void Renderer::render(Scene& scene)
 
 	m_window.draw(va, &circleTexture);
 	
-	/*
-	sf::CircleShape c{ 1.f };
-	c.setPointCount(16);
-	c.setOrigin(1.f, 1.f);
-	const auto& particles = scene.getParticles();
-	for (const auto& i : particles)
-	{
-		c.setPosition(i.pos().x, i.pos().y);
-		c.setScale(i.radius(), i.radius());
-		c.setFillColor(i.color());
-		m_window.draw(c);
-
-
-	}
-	*/
+	
 	
 }
+*/
 
 void Renderer::listenEvents(sf::Event& event)
 {

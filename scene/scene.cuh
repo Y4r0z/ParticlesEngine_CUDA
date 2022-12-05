@@ -22,7 +22,7 @@ private:
 
 public:
 	KernelScene(cui gw, cui gh, cui cs, const float r, sf::Vector2f border1, sf::Vector2f border2, sf::Vector2f gravity);
-	void simulate(Particle* grid, int* cellCount, float dt, int substeps);
+	void simulate(Particle* p, int count, float dt, int substeps);
 };
 
 

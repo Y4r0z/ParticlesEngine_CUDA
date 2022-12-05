@@ -32,7 +32,7 @@ int main()
     const int W = 1600;
     const int H = 900;
     const int maxObjects = 1000;
-    const int radius = 4;
+    const int radius = 3;
 
     bool stopped = false;
     bool toDrawGrid = false;
@@ -49,7 +49,7 @@ int main()
 
 
     Scene scene(W, H, radius, sf::Vector2f{ 0, 0 }, sf::Vector2f{ W, H });
-    scene.setSubStepsCount(1);
+    scene.setSubStepsCount(16);
 
 
     sf::Clock clock = sf::Clock::Clock();
@@ -60,9 +60,7 @@ int main()
 
 
     float ang = 0.f;
-    const int gW = scene.getGridSize().x;
-    const int gH = scene.getGridSize().y;
-    for (int i{}; i < gW * gH && scene.getParticles().size() < maxObjects; ++i)
+    for (int i{}; i < maxObjects; ++i)
     {
         auto p = Particle(radius);
         auto pos = sf::Vector2f(rand() % W, rand() % H);
@@ -119,7 +117,7 @@ int main()
 
 
         cur = clock.getElapsedTime();
-        text.drawAll(cur, prev, scene.getParticles().size());
+        text.drawAll(cur, prev, scene.getCount());
      
 
         window.display();
@@ -134,6 +132,7 @@ int main()
 
 void drawGrid(Scene& scene, sf::RenderWindow& win)
 {
+    /*
     int  X = scene.getGridSize().x;
     int Y = scene.getGridSize().y;
 
@@ -162,10 +161,12 @@ void drawGrid(Scene& scene, sf::RenderWindow& win)
         r.setPosition(sf::Vector2f((i/Y) * sW, (i%Y) * sH));
         win.draw(r);
     }   
+    */
 }
 
 void mouseClick(sf::RenderWindow& win, Scene& scene)
 {
+    /*
     const auto pos = sf::Vector2f(sf::Mouse::getPosition(win).x, sf::Mouse::getPosition(win).y);
     std::cout << pos.x << ' ' << pos.y << '\n';
     for (auto i : scene.getParticles())
@@ -176,32 +177,24 @@ void mouseClick(sf::RenderWindow& win, Scene& scene)
             i.print();
         }
     }
+    */
 }
 
 void explode(sf::RenderWindow& win, Scene& scene, float radius, float power)
 {
+    
     const auto pos = sf::Vector2f(sf::Mouse::getPosition(win).x, sf::Mouse::getPosition(win).y);
-    std::cout << pos.x << ' ' << pos.y << '\n' << "Explosion" << "\n";
-
-    auto gridWidth = scene.getGridSize().x;
-    auto gridHeight = scene.getGridSize().y;
-    auto cellCount = scene.getGridCellCount();
-    auto grid = scene.getGrid();
-    auto cellSize = scene.getCellSize();
-    int cnt = 0;
-    for (int i{}; i < gridWidth * gridHeight; ++i)
-        for (int j{}; j < cellCount[i]; ++j)
+    std::cout << pos.x << ' ' << pos.y << ": " << "Explosion" << "\n";
+    auto particles = scene.getParticles();
+    int count = scene.getCount();
+    for (int i{}; i < count; ++i)
+    {
+        const sf::Vector2f diff = pos - particles[i].pos();
+        const float m = sqrtf(diff.x * diff.x + diff.y * diff.y);
+        if (m <= radius)
         {
-            cnt++;
-            const int index = i * cellSize + j;
-            const sf::Vector2f diff = pos - grid[index].pos();
-            const float m = sqrtf(diff.x * diff.x + diff.y * diff.y);
-            if (m <= radius)
-            {
-                grid[index].setPos(grid[index].pos(), grid[index].pos() + (diff / m * (radius - (m * 0.7f)) / radius * power));
-            }
-
+            particles[i].setPos(particles[i].pos(), particles[i].pos() + (diff / m * (radius - (m * 0.7f)) / radius * power));
         }
-    std::cout << cnt << " : " << scene.getParticles().size() << '\n';
-
+    }
+    
 }
