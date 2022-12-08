@@ -5,7 +5,7 @@ using cui = const unsigned int;
 constexpr auto MAX_THREADS_PER_BLOCK = 1024;
 constexpr auto MAX_BLOCKS = 16;
 constexpr auto NUM_SM = 5;
-
+constexpr auto MAX_MAX = MAX_THREADS_PER_BLOCK * MAX_BLOCKS * NUM_SM;
 class KernelScene
 {
 private:

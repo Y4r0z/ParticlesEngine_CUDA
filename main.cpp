@@ -28,8 +28,8 @@ int main()
     srand((unsigned int)time(0));
     const int W = 1600;
     const int H = 900;
-    const int maxObjects = 1000;
-    const int radius = 3;
+    const int maxObjects = 5000;
+    const int radius = 4;
 
     bool stopped = false;
     bool toDrawPressure = false;
@@ -45,7 +45,7 @@ int main()
 
 
     Scene scene(W, H, radius, sf::Vector2f{ 0, 0 }, sf::Vector2f{ W, H });
-    scene.setSubStepsCount(6);
+    scene.setSubStepsCount(4);
 
 
     sf::Clock clock = sf::Clock::Clock();
@@ -78,13 +78,11 @@ int main()
                 if(event.key.code == sf::Keyboard::Space)
                     stopped = !stopped;
                 if (event.key.code == sf::Keyboard::Up && stopped)
-                    scene.simulate();
-                //if (event.key.code == sf::Keyboard::PageUp && stopped)
-                    //scene.subSimulate(); Пока не реализовано на GPU
+                    scene.simulate();         
                 if (event.key.code == sf::Keyboard::R)
                     toRender = !toRender;
                 if (event.key.code == sf::Keyboard::E)
-                    renderer.explode(scene, 120, 200);
+                    renderer.explode(scene, 80, 30);
                 if (event.key.code == sf::Keyboard::P)
                     toDrawPressure = !toDrawPressure;
                     scene.particlesPressure(toDrawPressure);

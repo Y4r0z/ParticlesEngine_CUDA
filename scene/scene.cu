@@ -8,47 +8,7 @@
 #include <chrono>
 #include <string>
 
-__device__ void pAtomicCpy(Particle& p1, Particle& p2)
-{
 
-
-	atomicExch(&p1.m_radius, p2.m_radius);
-
-	atomicExch(&p1.m_curPos.x, p2.m_curPos.x);
-	atomicExch(&p1.m_curPos.y, p2.m_curPos.y);
-
-	atomicExch(&p1.m_prevPos.x, p2.m_prevPos.x);
-	atomicExch(&p1.m_prevPos.y, p2.m_prevPos.y);
-	
-	atomicExch(&p1.m_pressure, p2.m_pressure);
-	atomicExch(&p1.m_pressureCoef, p2.m_pressureCoef);
-
-	//atomicExch(&p1.m_color.r, p2.m_color.r);
-	//atomicExch(&p1.m_color.g, p2.m_color.g);
-	//atomicExch(&p1.m_color.b, p2.m_color.b);
-
-	atomicExch(&p1.m_acceleration.x, p2.m_acceleration.x);
-	atomicExch(&p1.m_acceleration.y, p2.m_acceleration.y);
-
-}
-
-__device__ bool pCmp(Particle& p1, Particle& p2)
-{
-	return p1.m_curPos.x == p2.m_curPos.x && p1.m_curPos.y == p2.m_curPos.y &&
-		p1.m_prevPos.x == p2.m_prevPos.x && p1.m_prevPos.y == p2.m_prevPos.y &&
-		p1.m_radius == p2.m_radius;
-}
-__device__ void pCpy(Particle& p1, Particle& other)
-{
-	p1.m_curPos = other.m_curPos;
-	p1.m_prevPos = other.m_prevPos;
-	p1.m_radius = other.m_radius;
-	p1.m_pressure = other.m_pressure;
-	p1.m_pressureCoef = other.m_pressureCoef;
-	p1.m_color = other.m_color;
-	p1.m_acceleration = other.m_acceleration;
-	p1.returnColorPressure = other.returnColorPressure;
-}
 
 __device__ void kernelCalculatePos(Particle& p, const float dt)
 {
@@ -56,11 +16,11 @@ __device__ void kernelCalculatePos(Particle& p, const float dt)
 	p.m_prevPos.x = p.m_curPos.x;
 	p.m_prevPos.y = p.m_curPos.y;
 	const float m = sqrtf(vel_x * vel_x + vel_y * vel_y);
-	const float mc = p.m_pressure * p.m_pressure;
+	const float mc = p.m_pressure;
 	const float pc = 1.f / (1.f + mc);
 
-	p.m_curPos.x += (vel_x + (p.m_acceleration.x * dt * dt)) * pc;
-	p.m_curPos.y += (vel_y + (p.m_acceleration.y * dt * dt)) * pc;
+	p.m_curPos.x += (vel_x / (1.f + mc / 20.f) + (p.m_acceleration.x * dt * dt * pc * pc));
+	p.m_curPos.y += (vel_y / (1.f + mc / 20.f) + (p.m_acceleration.y * dt * dt * pc * pc));
 
 	p.m_pressureCoef = pc;
 	p.m_pressure = 0.f;
@@ -101,34 +61,30 @@ __device__ void kernelCollide(Particle& p1, Particle& p2)
 		return;
 	const float delta = ((r2 - dist)) * 0.5f;
 	const float nx = ax / dist * delta;
-	const float ny = ay / dist * delta;;
+	const float ny = ay / dist * delta;
 	p1.m_curPos.x += nx;
 	p1.m_curPos.y += ny;
 	p2.m_curPos.x -= nx;
 	p2.m_curPos.y -= ny;
 	p1.m_pressure += delta / 2.f;
 	p2.m_pressure += delta / 2.f;
-	
 }
 
-
-
+ 
 __device__ void staticGridCollide(cui pos1, cui pos2, int* grid, int* cellCount, Particle* particles, cui gridWidth, cui gridHeight, cui cellSize)
 {
 	if (pos2 < 0 || pos2 >= gridWidth * gridHeight)
 		return;
-
 	for (int i{}; i < cellCount[pos1]; ++i)
 		for (int j{}; j < cellCount[pos2]; ++j)
 		{
 			kernelCollide(particles[grid[pos1 * cellSize + i]], particles[grid[pos2 * cellSize + j]]);
-		}
-	
+		}	
 }
 
-__global__ void calculateCollisions(int* grid, int* cellCount, Particle* particles, cui gridWidth, cui gridHeight, cui cellSize, float radius, cui count)
+__global__ void calculateCollisions(int* grid, int* cellCount, Particle* particles, cui gridWidth, cui gridHeight, cui cellSize, float radius, cui count, cui delta)
 {
-	const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+	const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x + delta;
 	if (i >= count) return;
 	// –еальные координаты
 	int x = (int)(particles[i].m_curPos.x / (radius * 2.f));
@@ -143,11 +99,19 @@ __global__ void calculateCollisions(int* grid, int* cellCount, Particle* particl
 	if (y >= gridHeight)
 		y = gridHeight - 1;
 	int pos2 = x * gridHeight + y;
+	// ѕо-сути, такое сравнение служит лишь украшением, ибо не работает в параллельном выполнении
 	if (pos2 != i && cellCount[pos2] < cellSize)
 	{
 		int old = atomicAdd(&cellCount[pos2], 1);
 		grid[pos2 * cellSize + old] = i;
 	}
+}
+
+__global__ void correctGrid(int* cellCount, cui gridWidth, cui gridHeight, cui cellSize, cui delta)
+{
+	cui i = blockIdx.x * blockDim.x + threadIdx.x + delta;
+	if (i >= gridHeight * gridWidth) return;
+	if (cellCount[i] > cellSize) cellCount[i] = cellSize;
 }
 
 __global__ void applyGravityKernel(Particle* particles, cui count, sf::Vector2f g)
@@ -157,9 +121,9 @@ __global__ void applyGravityKernel(Particle* particles, cui count, sf::Vector2f 
 	kernelAccelerate(particles[i], g);
 }
 
-__global__ void applyCollisionsKernel(int* grid, int* cellCount, Particle* particles, cui gridWidth, cui gridHeight, cui cellSize, float radius)
+__global__ void applyCollisionsKernel(int* grid, int* cellCount, Particle* particles, cui gridWidth, cui gridHeight, cui cellSize, float radius, cui delta)
 {
-	const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+	const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x + delta;
 	if (i >= gridHeight * gridWidth) return;
 	for (int j{}; j < cellCount[i]; ++j)
 	{
@@ -172,6 +136,16 @@ __global__ void applyCollisionsKernel(int* grid, int* cellCount, Particle* parti
 		staticGridCollide(i, i - gridHeight, grid, cellCount, particles, gridWidth, gridHeight, cellSize);
 		staticGridCollide(i, i - gridHeight + 1, grid, cellCount, particles, gridWidth, gridHeight, cellSize);
 		staticGridCollide(i, i - gridHeight - 1, grid, cellCount, particles, gridWidth, gridHeight, cellSize);
+	}
+}
+
+__global__ void applyPartialCollisions(cui pos, int* grid, int* cellCount, Particle* particles, cui gridWidth, cui gridHeight, cui cellSize, float radius, cui delta)
+{
+	const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x + delta;
+	if (i >= gridHeight * gridWidth) return;
+	for (int j{}; j < cellCount[i]; ++j)
+	{
+		staticGridCollide(i, i + pos, grid, cellCount, particles, gridWidth, gridHeight, cellSize);
 	}
 }
 
@@ -196,7 +170,7 @@ __global__ void emptyGrid(int* grid, int* cellCount, cui gridWidth, cui gridHeig
 	cellCount[i] = 0;
 }
 
-KernelScene::KernelScene(cui gw, cui gh, cui cs, const float r, sf::Vector2f b1, sf::Vector2f b2, sf::Vector2f g) : 
+KernelScene::KernelScene(cui gw, cui gh, cui cs, const float r, sf::Vector2f b1, sf::Vector2f b2, sf::Vector2f g) :
 	gridWidth(gw), gridHeight(gh), cellSize(cs), radius(r), border1(b1), border2(b2), gravity(g)
 {
 
@@ -206,18 +180,13 @@ KernelScene::KernelScene(cui gw, cui gh, cui cs, const float r, sf::Vector2f b1,
 
 void KernelScene::simulate(Particle* p, int count, float dt, int substeps)
 {
-	sf::Clock clock = sf::Clock::Clock();
-	sf::Time prev = clock.getElapsedTime();
-	sf::Time cur;
-
 	Particle* device_particles;
-
 	int* device_grid = 0;
 	int* device_cells = 0;
 
 	cudaError_t cudaStatus;
 
-	cudaStatus = cudaSetDevice(0);
+	cudaSetDevice(0);
 
 	cudaStatus = cudaMalloc((void**)&device_grid, size * sizeof(int));
 	if (cudaStatus != cudaSuccess) {
@@ -243,18 +212,30 @@ void KernelScene::simulate(Particle* p, int count, float dt, int substeps)
 
 	for (int k{}; k < substeps; ++k)
 	{
-		emptyGrid << < NUM_SM * MAX_BLOCKS, 1024 >> > (device_grid, device_cells, gridWidth, gridHeight, cellSize);
+		emptyGrid << < MAX_BLOCKS * NUM_SM, MAX_THREADS_PER_BLOCK >> > (device_grid, device_cells, gridWidth, gridHeight, cellSize);
+		cudaDeviceSynchronize();
 
-		calculateCollisions <<< NUM_SM * MAX_BLOCKS, 1024 >>> (device_grid, device_cells, device_particles, gridWidth, gridHeight, cellSize, radius, count);
+		applyGravityKernel << < MAX_BLOCKS * NUM_SM, MAX_THREADS_PER_BLOCK >> > (device_particles, count, gravity / (float)substeps);
+		cudaDeviceSynchronize();
 
-		applyGravityKernel << < NUM_SM * MAX_BLOCKS, 1024 >> > (device_particles, count, gravity/(float)substeps);
+		for (int n{}; n < 1 + (gridWidth * gridHeight) / MAX_MAX; ++n)
+			calculateCollisions << < MAX_BLOCKS * NUM_SM, MAX_THREADS_PER_BLOCK >> >(device_grid, device_cells, device_particles, gridWidth, gridHeight, cellSize, radius, count, n * MAX_MAX);	
+		cudaDeviceSynchronize();
+
+		for (int n{}; n < 1 + (gridWidth * gridHeight) / MAX_MAX; ++n)
+			correctGrid << < MAX_BLOCKS * NUM_SM, MAX_THREADS_PER_BLOCK >> > (device_cells, gridWidth, gridHeight, cellSize, n);
+		cudaDeviceSynchronize();
+
+		for (int n{}; n < 1 + (gridWidth * gridHeight) / MAX_MAX; ++n)
+			applyCollisionsKernel << < MAX_BLOCKS * NUM_SM, MAX_THREADS_PER_BLOCK >> > (device_grid, device_cells, device_particles, gridWidth, gridHeight, cellSize, radius, n * MAX_MAX);
+		cudaDeviceSynchronize();
+
+		applyConstraintsKernel << < MAX_BLOCKS * NUM_SM, MAX_THREADS_PER_BLOCK >> > (device_particles, count, border1, border2);
+		cudaDeviceSynchronize();
 
 
-		applyCollisionsKernel << < NUM_SM * MAX_BLOCKS, 1024 >> > (device_grid, device_cells, device_particles,gridWidth, gridHeight, cellSize, radius);
-
-		applyConstraintsKernel << < NUM_SM * MAX_BLOCKS, 1024 >> > (device_particles, count, border1, border2);
-
-		calculatePositionsKernel << < NUM_SM * MAX_BLOCKS, 1024 >> > (device_particles, count, dt/(float)substeps);
+		calculatePositionsKernel << < MAX_BLOCKS * NUM_SM, MAX_THREADS_PER_BLOCK >> > (device_particles, count, dt/(float)substeps);
+		cudaDeviceSynchronize();
 	}
 
 
@@ -273,10 +254,11 @@ void KernelScene::simulate(Particle* p, int count, float dt, int substeps)
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "cudaMemcpy out failed\n %s", cudaGetErrorString(cudaStatus));
 	}
-	
+
 
 Error:
 	cudaFree(device_grid);
 	cudaFree(device_cells);
+	cudaFree(device_particles);
 	
 }

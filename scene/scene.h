@@ -23,7 +23,7 @@ private:
 	const int windowHeight;
 	const float radius;
 
-	const int cellSize = 8;
+	const int cellSize = 6;
 	const int gridWidth = (int)(windowWidth / (radius * 2.f));
 	const int gridHeight = (int)(windowHeight / (radius * 2.f));
 
