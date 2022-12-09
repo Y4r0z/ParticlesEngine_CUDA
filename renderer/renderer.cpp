@@ -28,7 +28,7 @@ void Renderer::render(Scene& scene)
 	{
 		const auto pos = particles[i / 4].pos();
 		const auto r = particles[i / 4].r();
-		const auto c = particles[i / 4].color();
+		const auto c = particles[i / 4].getColor();
 		const int t = 64; //Размер текстуры
 
 		v[i].color = c;

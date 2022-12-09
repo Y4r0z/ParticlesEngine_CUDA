@@ -45,7 +45,7 @@ int main()
 
 
     Scene scene(W, H, radius, sf::Vector2f{ 0, 0 }, sf::Vector2f{ W, H });
-    scene.setSubStepsCount(4);
+    scene.setSubStepsCount(1);
 
 
     sf::Clock clock = sf::Clock::Clock();
@@ -82,7 +82,7 @@ int main()
                 if (event.key.code == sf::Keyboard::R)
                     toRender = !toRender;
                 if (event.key.code == sf::Keyboard::E)
-                    renderer.explode(scene, 80, 30);
+                    renderer.explode(scene, 80, 60);
                 if (event.key.code == sf::Keyboard::P)
                     toDrawPressure = !toDrawPressure;
                     scene.particlesPressure(toDrawPressure);

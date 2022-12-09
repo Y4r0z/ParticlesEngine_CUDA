@@ -3,15 +3,16 @@
 class Particle
 {
 public:
-	float m_radius{1};
-	sf::Vector2f m_curPos;
-	sf::Vector2f m_prevPos;
-	sf::Vector2f m_acceleration;
-	sf::Color m_color;
-	float m_pressure{0};
+	float radius{1};
+	sf::Vector2f curPos;
+	sf::Vector2f prevPos;
+	sf::Vector2f deltaPos;
+	sf::Vector2f acceleration;
+	sf::Color color;
+	float pressure{0};
 
 	//Debug values
-	float m_pressureCoef{0};
+	float pressureCoef{0};
 	bool returnColorPressure = false;
 
 public:
@@ -24,15 +25,13 @@ public:
 	void collide(Particle& p);
 
 	sf::Vector2f pos();
-	sf::Vector2f prevPos();
+	sf::Vector2f getPrevPos();
 	float x();
 	float y();
 	float r();
-	float radius();
 	float p();
-	float pressure();
-	sf::Color color();
-
+	float getPressure();
+	sf::Color getColor();
 	void setPos(sf::Vector2f newPos);
 	void setPos(sf::Vector2f newPos, sf::Vector2f prevPos);
 	void setRadius(float newRadius);
@@ -46,14 +45,15 @@ public:
     Particle& operator=(const Particle& other)
 	{
 		if (this == &other) return *this;
-		m_curPos = other.m_curPos;
-		m_prevPos = other.m_prevPos;
-		m_radius = other.m_radius;
-		m_pressure = other.m_pressure;
-		m_pressureCoef = other.m_pressureCoef;
-		m_color = other.m_color;
-		m_acceleration = other.m_acceleration;
+		curPos = other.curPos;
+		prevPos = other.prevPos;
+		radius = other.radius;
+		pressure = other.pressure;
+		pressureCoef = other.pressureCoef;
+		color = other.color;
+		acceleration = other.acceleration;
 		returnColorPressure = other.returnColorPressure;
+		deltaPos = other.deltaPos;
 		return *this;
 	}
 

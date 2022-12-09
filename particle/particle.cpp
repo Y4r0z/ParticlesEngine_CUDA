@@ -21,55 +21,55 @@ float sqrtfast(const float x)
 
 
 
-Particle::Particle(float radius) : m_radius(radius)
+Particle::Particle(float radius) : radius(radius)
 {
-	m_color = ColorLib::toRGB(rand() % 360, 50, 50);
+	color = ColorLib::toRGB(rand() % 360, 50, 50);
 }
 
-Particle::Particle() { m_color = ColorLib::toRGB(rand() % 360, 50, 50); }
+Particle::Particle() { color = ColorLib::toRGB(rand() % 360, 50, 50); }
 
 void Particle::calculatePos(float dt)
 {
-	const sf::Vector2f vel = m_curPos - m_prevPos;
-	m_prevPos = m_curPos;
+	const sf::Vector2f vel = curPos - prevPos;
+	prevPos = curPos;
 	//Пытаюсь решить проблемы с давлением
 	const float velMagnitude = sqrtf(vel.x * vel.x + vel.y * vel.y);
-	const float moveCoef = (m_pressure * m_pressure);
-	const float pressureCoef = 1.f / (1.f + (moveCoef));
+	const float moveCoef = (pressure * pressure);
+	const float pc = 1.f / (1.f + (moveCoef));
 
-	m_curPos += (vel + (m_acceleration * (dt * dt))) * pressureCoef;
+	curPos += (vel + (acceleration * (dt * dt))) * pc;
 
-	m_pressureCoef = pressureCoef;
-	m_pressure = 0.f;
+	pressureCoef = pc;
+	pressure = 0.f;
 }
 
 void Particle::accelerate(sf::Vector2f a) 
 {
-	m_acceleration += a;
+	acceleration += a;
 }
 
 void Particle::applyConstraint(sf::Vector2f pos1, sf::Vector2f pos2)
 {
 	
 	const float 
-		x = m_curPos.x,
-		y = m_curPos.y,
-		r = m_radius;
+		x = curPos.x,
+		y = curPos.y,
+		r = radius;
 	if (x + r > pos2.x)
-		m_curPos.x = pos2.x - r;
+		curPos.x = pos2.x - r;
 	if (y + r > pos2.y)
-		m_curPos.y = pos2.y - r;
+		curPos.y = pos2.y - r;
 	if (x - r < pos1.x)
-		m_curPos.x = pos1.x + r;
+		curPos.x = pos1.x + r;
 	if (y - r < pos1.y)
-		m_curPos.y = pos1.y + r;
+		curPos.y = pos1.y + r;
 }
 
 void Particle::collide(Particle& p)
 {
-	const sf::Vector2f a = m_curPos - p.m_curPos;
+	const sf::Vector2f a = curPos - p.curPos;
 	const float ndist = (a.x * a.x) + (a.y * a.y);
-	const float r2 = m_radius + p.m_radius;
+	const float r2 = radius + p.radius;
 	if (ndist > r2 * r2)
 		return;
 	const float dist = sqrtf(ndist); //Оптиизация вычислений
@@ -78,64 +78,63 @@ void Particle::collide(Particle& p)
 		return;
 	const float delta = ((r2 - dist)) * 0.5f;
 	const sf::Vector2f n{ a.x / dist * delta, a.y / dist * delta };
-	m_curPos += n;
-	p.m_curPos -= n;
-	m_pressure += delta / 2.f;
-	p.m_pressure += delta / 2.f;
+	curPos += n;
+	p.curPos -= n;
+	pressure += delta / 2.f;
+	p.pressure += delta / 2.f;
 	
 }
 
 
 
 
-float Particle::x() { return m_curPos.x; }
-float Particle::y() { return m_curPos.y; }
-float Particle::r() { return m_radius; }
-float Particle::radius() { return m_radius; }
-sf::Vector2f Particle::pos() { return m_curPos; }
-float Particle::p() { return m_pressure; }
-float Particle::pressure() { return m_pressure; }
+float Particle::x() { return curPos.x; }
+float Particle::y() { return curPos.y; }
+float Particle::r() { return radius; }
+sf::Vector2f Particle::pos() { return curPos; }
+float Particle::p() { return pressure; }
+float Particle::getPressure() { return pressure; }
 
 
 
-void Particle::setPos(sf::Vector2f curPos)
+void Particle::setPos(sf::Vector2f pos)
 {
-	m_curPos = curPos;
+	curPos = pos;
 }
-void Particle::setPos(sf::Vector2f curPos, sf::Vector2f prevPos)
+void Particle::setPos(sf::Vector2f pos, sf::Vector2f pPos)
 {
-	m_curPos = curPos;
-	m_prevPos = prevPos;
-}
-
-void Particle::setRadius(float radius)
-{
-	m_radius = radius;
+	curPos = pos;
+	prevPos = pPos;
 }
 
-void Particle::setColor(sf::Color color)
+void Particle::setRadius(float r)
 {
-	m_color = color;
+	radius = r;
+}
+
+void Particle::setColor(sf::Color c)
+{
+	color = c;
 }
 
 
-sf::Color Particle::color()
+sf::Color Particle::getColor()
 {
 	if(returnColorPressure)
-		return sf::Color(255, 255 * sqrtf(m_pressureCoef), 255 * sqrtf(m_pressureCoef));
-	return m_color;
+		return sf::Color(255, 255 * sqrtf(pressureCoef), 255 * sqrtf(pressureCoef));
+	return color;
 }
-sf::Vector2f Particle::prevPos()
+sf::Vector2f Particle::getPrevPos()
 {
-	return m_prevPos;
+	return prevPos;
 }
 
 void Particle::print() 
 {
-	const sf::Vector2f vel = (m_curPos - m_prevPos);
+	const sf::Vector2f vel = (curPos - prevPos);
 	std::cout << "Particle."
-		<< "Pos: " << m_curPos.x << ", " << m_curPos.y << " R: " << m_radius << 
-		"\nPressure coef: " << m_pressureCoef << 
+		<< "Pos: " << curPos.x << ", " << curPos.y << " R: " << radius << 
+		"\nPressure coef: " << pressureCoef << 
 		"\nVelocity: " << sqrtf(vel.x * vel.x + vel.y * vel.y)
 		<< "\n\n";
 }
